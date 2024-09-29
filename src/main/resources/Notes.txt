@@ -1,0 +1,216 @@
+1.GET,DELETE-This method does not require any Request Body. You can send request parameters and path variables to define the custom or dynamic URL.
+  POST,PUT-This method contains the Request Body. We can send request parameters and path variables to define the custom or dynamic URL.
+2.To use db provide springboot-starter-data-jpa ,mysql-connector-java
+3.Need to provide getter and setter to get result in API's -Ensure that the fields in the Employee class are not private without corresponding getters.
+  Jackson, the default JSON library used by Spring Boot, uses getters to serialize the object.
+  Or provide getters and setters
+  When you return an object as a JSON response in a Spring Boot application, the default JSON library (Jackson) uses reflection to access the object's fields.
+  Jackson looks for public getter methods to serialize the object's properties into JSON format. If there are no getters:
+  No Access to Fields: Jackson cannot access the private fields directly, so it won’t know how to convert those fields into JSON.
+  Empty Objects: As a result, if you don't provide getters (and setters if you need to deserialize), you will end up with empty JSON objects ({} or [{}]).
+ 4.Write @GeneratedValue(strategy=GenerationType.IDENTITY) to autogenerate id otherwise need to provide id explicitly
+ 5.Make Column in table in mysql as auto increment to get this generated value work
+ 6.When we provide id as autoincrement and GeneratedValue then no need to provide it in request
+ 7.Use @RequestBody while providing json in input
+ 8.Auto-Increment in the Database:
+   When you set the id column to be auto-increment in your database schema (e.g., using AUTO_INCREMENT in MySQL), the database automatically generates a unique id for each new row when you insert data. This means you don't have to manually assign an id value when adding new records.
+   @GeneratedValue Annotation:
+   The @GeneratedValue(strategy = GenerationType.IDENTITY) or @GeneratedValue(strategy = GenerationType.AUTO) annotation in your entity class tells JPA (Java Persistence API) to let the database handle the generation of the primary key.
+   When you create a new Employee entity and save it, JPA will not include the id in the insert statement, allowing the database to generate it automatically.
+    insert into employee (name) values (?)-> no id
+9. Diff between IDENTITY and AUTO
+ @GeneratedValue(strategy = GenerationType.IDENTITY)
+ Identity Generation:
+ This strategy relies on the database to generate the primary key value.
+ It works with databases that support auto-increment fields (like MySQL).
+ Behavior:
+ When an entity is saved, the database generates the id value, and it returns this value back to the application.
+ Each time a new row is inserted, the database generates a unique id automatically.
+ Usage:
+ Best used when you want the database to manage primary key generation and are sure that your database supports the identity generation (e.g., MySQL's AUTO_INCREMENT).
+ Drawbacks:
+ It may lead to performance issues in bulk inserts, as the database must retrieve the generated ID after each insert.
+ @GeneratedValue(strategy = GenerationType.AUTO)
+ Automatic Strategy Selection:
+ This strategy allows the JPA provider (like Hibernate) to choose the best strategy for generating the primary key based on the underlying database dialect.
+ Behavior:
+ The JPA provider will determine whether to use IDENTITY, SEQUENCE, or another strategy based on the configuration of the database.
+ For example, in MySQL, it may use IDENTITY, while in Oracle, it might use SEQUENCE.
+ Usage:
+ This is useful if you want flexibility and are working with multiple databases or different database configurations.
+ Drawbacks:
+ Since the strategy is chosen automatically, it might not always align with your specific performance or architectural needs. You might have less control over the ID generation process.
+ Summary of Key Differences
+ Feature	-----    ---------   GenerationType.IDENTITY	----------------------- GenerationType.AUTO
+ ID Generation----------Database generates ID (e.g., AUTO_INCREMENT)----------JPA provider decides (could be IDENTITY, SEQUENCE, etc.)
+ Best for	------------Databases that support auto-increment	--------------Multiple databases, flexibility
+ Performance------------Can be slower for bulk inserts------------------------Depends on the chosen strategy
+ Control over strategy--Fixed to IDENTITY-------------------------------------Automatic selection based on DB dialect
+ Conclusion
+ Choose GenerationType.IDENTITY when you want explicit control over identity generation in databases that support it. Use GenerationType.AUTO when you prefer flexibility and may work with different types of databases.
+10. Providing an id in the request when it is supposed to be auto-generated can lead to unexpected behavior, including potential primary key violations or conflicts with the auto-increment sequence. It's generally best practice to let the database handle the ID generation and avoid sending an id in creation requests.
+    If you provide an id value that does not conflict with existing entries (i.e., it doesn't already exist in the database), the record will be inserted with the specified id.
+    This can lead to unexpected behavior because it bypasses the auto-increment mechanism.
+    If you provide an id that already exists in the database, you will get a SQLIntegrityConstraintViolationException, indicating a primary key constraint violation.
+
+11.FindById return optional object  so can handle it using ifPresent
+Handling Optional objects effectively makes your code cleaner, reduces the risk of NullPointerException, and makes null-handling more explicit.
+In Java, an Optional object is used to represent a value that may or may not be present, helping to avoid null checks and NullPointerException. To handle an Optional object effectively, you can use various methods provided by the Optional class.
+
+Common Methods to Handle Optional:
+isPresent() and get():
+isPresent() checks if the value is present.
+get() retrieves the value if present.
+
+ public Employee getInfoById(int id) {
+        Optional<Employee> emp = repository.findById(id);
+        if (emp.isPresent())
+            return emp.get();
+        else
+            return null;
+    }
+12. For Delete use DeleteMapping, use findbyid first then delete
+    In Path variable
+    GET http://localhost:8080/getDataId/6
+    DELETE http://localhost:8080/deleteData?id=6
+    In a Spring Boot application, you can pass both Request Parameters and Path Variables in a URI. Here’s a breakdown of how to use each:
+
+    1. Path Variables:
+    Path variables are typically part of the URI, where values are embedded directly within the URL.
+    They are used when the URL itself defines an entity or resource.
+    2. Request Parameters:
+    Request parameters are passed as part of the query string after the ? in the URI.
+    They are used when you want to pass optional parameters or filters in the request.
+    Example: Combining Path Variables and Request Parameters
+    Consider a scenario where you have an API that fetches an Employee by id (Path Variable), and you also want to apply filters (Request Parameters) like a department and status.
+
+    Controller Example
+
+    java
+    Copy code
+    package com.example.demo.Controller;
+
+    import com.example.demo.Entity.Room;
+    import com.example.demo.Repository.UserRepository;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.web.bind.annotation.*;
+
+    import java.util.List;
+
+    @RestController
+    public class EmployeeController {
+
+        @Autowired
+        private EmployeeRepository repository;
+
+        // Using Path Variable to get employee by id
+        @GetMapping("/employee/{id}")
+        public Employee getEmployeeById(@PathVariable Integer id) {
+            return repository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Employee not found"));
+        }
+
+        // Using both Path Variable and Request Parameters in the same method
+        @GetMapping("/employees/{department}")
+        public List<Employee> getEmployeesByDepartmentAndStatus(
+                @PathVariable String department,
+                @RequestParam(required = false) String status) {
+
+            // Example of handling both parameters, where status is optional
+            if (status != null) {
+                return repository.findByDepartmentAndStatus(department, status);
+            } else {
+                return repository.findByDepartment(department);
+            }
+        }
+    }
+    How to Pass Values in URI
+    For Path Variables:
+    URL: http://localhost:8080/employee/1
+    In the above case, 1 is the id of the employee, and it is passed as a Path Variable.
+    For Request Parameters:
+    URL: http://localhost:8080/employees/HR?status=active
+    In this case:
+    HR is a Path Variable (department),
+    status=active is a Request Parameter (optional).
+    You can have multiple request parameters by separating them with &: ?param1=value1&param2=value2.
+    Detailed Explanation:
+    @PathVariable:
+    Used to extract values from the URL's path.
+    Example: In @GetMapping("/employee/{id}"), {id} is the placeholder for the actual id value in the URL.
+    java
+    Copy code
+    @GetMapping("/employee/{id}")
+    public Employee getEmployeeById(@PathVariable Integer id) {
+        return repository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Employee not found"));
+    }
+    @RequestParam:
+    Used to extract query parameters from the request URL.
+    You can make a parameter optional by using required = false.
+    java
+    Copy code
+    @GetMapping("/employees")
+    public List<Employee> getEmployees(@RequestParam(required = false) String department,
+                                       @RequestParam(required = false) String status) {
+        // Logic based on query params
+    }
+    Example Requests:
+    Path Variable Example:
+    bash
+    Copy code
+    GET http://localhost:8080/employee/1
+    Path Variable + Request Parameter Example:
+    bash
+    Copy code
+    GET http://localhost:8080/employees/HR?status=active
+    Multiple Request Parameters Example:
+    bash
+    Copy code
+    GET http://localhost:8080/employees/HR?status=active&sortBy=name
+    Key Points:
+    Use @PathVariable for essential parts of the URI, like resource identifiers.
+    Use @RequestParam for optional, filter-like parameters.
+    You can pass multiple request parameters using the & symbol.
+    For optional request parameters, you can set required = false in @RequestParam to avoid errors when a parameter is not provided.
+    This approach makes your API flexible and more readable by keeping essential resource identifiers in the path while passing filters and optional data as request parameters.
+
+13. can we use pathvaribale to provide optional param what is difference in both
+14.  can provide string like this here name is Path variable
+        Pathvariable
+         @RequestMapping(value="/getDataName/{name}")
+            public List<Employee> getInfoById(@PathVariable (name="name") String name)
+            http://localhost:8080/getDataName/Ram
+
+        RequestParam
+         @RequestMapping(value="/getDataName2/")
+            public List<Employee> getInfoByName(@RequestParam (name="name") String name)
+            http://localhost:8080/getDataName2/?name=Ram
+
+ 15.Query
+
+    To implement a findByName method in a Spring Data JPA repository, you can use the derived query feature of Spring Data. This allows you to automatically generate queries based on method names, such as findByName.
+
+    Here's how you can do it:
+
+    1. Define the findByName Method in Your Repository
+    First, you need to declare the method in your repository interface. Spring Data JPA will automatically implement the query based on the method name.
+
+    EmployeeRepository.java
+
+
+    public interface EmployeeRepository extends JpaRepository<Employee, Integer> {
+
+        // Method to find employees by name
+        List<Employee> findByName(String name);
+    }
+    In this example, findByName will automatically generate a SQL query to find all employees with the specified name.
+    2. Custom Queries (Optional)
+    If you need more complex queries or more control over the query logic, you can write a custom query using the @Query annotation.
+
+    Example: Custom Query with @Query
+
+    java
+    Copy code
+    @Query("SELECT e FROM Employee e WHERE e.name = :name")
+    List<Employee> findByNameCustom(@Param("name") String name);
