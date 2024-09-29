@@ -13,27 +13,27 @@ public class UserController {
     @Autowired
     UserService userService;
 
-    @RequestMapping(value="/getUsers")
+    @GetMapping(value="/getUsers")
     public List<User> getUsers()
     {
         return userService.getUsers();
     }
-        @RequestMapping(value="/getDataId/{id}")
+        @GetMapping(value="/getUserById/{id}")
     public User getUserById(@PathVariable (name="id") int id)
     {
         return userService.getUserById(id);
     }
-    @RequestMapping(value="/getDataName/{name}")
+    @GetMapping(value="/getUserName/{name}")
     public List<User> getInfoById(@PathVariable (name="name") String name)
     {
         return userService.getUserByName(name);
     }
-    @RequestMapping(value="/getDataName2/")
+    @GetMapping(value="/getUserName2/")
     public List<User> getInfoByName(@RequestParam (name="name") String name)
     {
         return userService.getUserByName(name);
     }
-    @RequestMapping(value="/getDataName3/")
+    @GetMapping(value="/getUserName3/")
     public List<Room> getInfoByNameAndId(@RequestParam (name="id") int id, @RequestParam (name="name") String name)
     {
         return userService.getInfoByNameAndId(id,name);
